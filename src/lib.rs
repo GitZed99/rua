@@ -2,19 +2,26 @@ use std::env;
 use std::error::Error;
 use std::fs;
 
-pub struct Config<'a> {
-    pub query: &'a String,
-    pub filename: &'a String,
+pub struct Config {
+    pub query: String,
+    pub filename: String,
     pub case_sensitive: bool,
 }
 
-impl<'a> Config<'a> {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
+impl Config {
+    pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
+        if args.len() < 3 {//该len 方法本身也是一个迭代器实现。其指针偏移 将影响长度
             return Err("not enough arguments");
         }
-        let query = &args[1];
-        let filename = &args[2];
+        args.next();//is the rua here
+        let query = match args.next(){
+            Some(arg)=>arg,
+            None => return Err("哥你找啥呢？爸帮你找找?"),
+        };
+        let filename = match args.next(){
+            Some(arg)=>arg,
+            None => return Err("你tm文件名字呢?"),
+        };
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
         Ok(Config {
             query,
@@ -38,24 +45,12 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut results = Vec::new();
-    for line in contents.lines() {
-        if line.contains(query) {
-            results.push(line);
-        }
-    }
-    results
+    contents.lines().filter(|line| line.contains(query)).collect()
 }
 
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
-    let mut results = Vec::new();
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            results.push(line);
-        }
-    }
-    results
+    contents.lines().filter(|line| line.to_lowercase().contains(&query)).collect()
 }
 
 #[cfg(test)]
